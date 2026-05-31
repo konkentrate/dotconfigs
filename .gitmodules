@@ -1,0 +1,3 @@
+[submodule "mbp_t1/snd_hda_macbookpro"]
+	path = mbp_t1/snd_hda_macbookpro
+	url = https://github.com/davidjo/snd_hda_macbookpro
