@@ -87,11 +87,11 @@ sudo mkinitcpio -P
 ```
 Then reboot.
 
-## Sleep / Suspend
+# Sleep / Suspend
 
 The fix here should be done so the laptop wakes at all: https://github.com/Dunedan/mbp-2016-linux#suspend--hibernation
 
-Optionally for faster wake up (but more battery consumption set up S2IDLE instead of DEEP sleep. Add this to your /etc/default/grub GRUB_CMDLINE_LINUX_DEFAULT
+Optionally for faster wake up (but more battery consumption) set up S2IDLE instead of DEEP sleep. Add this to your /etc/default/grub GRUB_CMDLINE_LINUX_DEFAULT
 ```
 mem_sleep_default=s2idle
 ```
