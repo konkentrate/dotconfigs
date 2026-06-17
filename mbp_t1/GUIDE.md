@@ -87,6 +87,7 @@ sudo mkinitcpio -P
 ```
 Then reboot.
 
+<<<<<<< HEAD
 # MacBook Pro Touchbar Fix After Sleep (Linux)
 
 ## Problem
@@ -172,3 +173,13 @@ sudo udevadm trigger
 ```
 
 Wake time dropped from ~65 seconds to ~1 second.
+=======
+# Sleep / Suspend
+
+The fix here should be done so the laptop wakes at all: https://github.com/Dunedan/mbp-2016-linux#suspend--hibernation
+
+Optionally for faster wake up (but more battery consumption) set up S2IDLE instead of DEEP sleep. Add this to your /etc/default/grub GRUB_CMDLINE_LINUX_DEFAULT
+```
+mem_sleep_default=s2idle
+```
+>>>>>>> 451fc1f1330b86b6a158fd84ed41eb8a2fb99014
