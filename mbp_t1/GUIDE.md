@@ -190,6 +190,14 @@ Added to `/etc/grub.d/40_custom` as a separate GRUB entry:
 - `amdgpu.runpm=1` — enable AMD runtime power management
 - `amdgpu.modeset=0` — disable AMD modesetting (iGPU handles display)
 
+```
+menuentry 'CachyOS ECO (Intel only)' --class cachyos --class gnu-linux --class gnu --class os {
+    search --no-floppy --fs-uuid --set=root 7721d8ac-f620-4108-aa00-b65c32f155b3
+    linux /@/boot/vmlinuz-linux-cachyos root=UUID=7721d8ac-f620-4108-aa00-b65c32f155b3 rw rootflags=subvol=@ quiet splash brcmfmac.feature_disable=0x82000 intel_iommu=on iommu=pt pcie_ports=compat mem_sleep_default=s2idle amdgpu.runpm=1 amdgpu.modeset=0
+    initrd /@/boot/initramfs-linux-cachyos.img
+}
+```
+
 ## Config Files
 - `/etc/modprobe.d/amdgpu.conf` — amdgpu runtime PM + modeset options
 - `/etc/modprobe.d/i915.conf` — Intel iGPU PSR/FBC/DC power saving
