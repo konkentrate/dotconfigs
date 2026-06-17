@@ -86,3 +86,89 @@ echo "options apple_ib_tb fnmode=2" | sudo tee /etc/modprobe.d/apple-ib-tb.conf
 sudo mkinitcpio -P
 ```
 Then reboot.
+
+# MacBook Pro Touchbar Fix After Sleep (Linux)
+
+## Problem
+
+On Linux with the `applespi` drivers, the touchbar goes blank after waking from s2idle suspend and doesn't come back until a full reboot.
+
+## Root Cause
+
+The touchbar is a USB HID device (`05ac:8600`, Apple iBridge) connected internally via USB. After s2idle suspend, the USB device doesn't reinitialize properly on wake. Simply reloading the kernel modules (`apple_ib_tb`, `apple_ibridge`) is not enough — the USB device itself needs to be reset.
+
+## Fix
+
+Create a systemd sleep hook that resets the USB device on resume.
+
+### 1. Find the USB device path
+
+```bash
+lsusb | grep -i apple
+# Bus 001 Device 002: ID 05ac:8600 Apple, Inc. iBridge
+
+# Find the sysfs path
+cat /sys/bus/usb/devices/1-3/idVendor
+# Should output: 05ac
+```
+
+The device is at `/sys/bus/usb/devices/1-3`.
+
+### 2. Create the sleep hook
+
+Scripts must go in `/usr/lib/systemd/system-sleep/` (not `/etc/systemd/system-sleep/`).
+
+```bash
+sudo nano /usr/lib/systemd/system-sleep/touchbar-resume.sh
+```
+
+```bash
+#!/bin/bash
+if [ "$1" = "post" ]; then
+    sleep 2
+    echo 0 > /sys/bus/usb/devices/1-3/authorized
+    sleep 1
+    echo 1 > /sys/bus/usb/devices/1-3/authorized
+fi
+```
+
+```bash
+sudo chmod +x /usr/lib/systemd/system-sleep/touchbar-resume.sh
+```
+
+### 3. Test manually
+
+systemd calls sleep hooks with two arguments, so test like this:
+
+```bash
+sudo /usr/lib/systemd/system-sleep/touchbar-resume.sh post suspend
+```
+
+The touchbar should flicker and come back within ~3 seconds.
+
+### 4. Test on real suspend
+
+```bash
+sudo systemctl suspend
+```
+
+On wake the touchbar should restore automatically.
+
+## Bonus: Fix slow wake (65 second delay)
+
+The Thunderbolt 3 USB controllers (`JHL6540`) were timing out on resume causing ~65 second wake times. Fix with a udev rule:
+
+```bash
+sudo nano /etc/udev/rules.d/99-thunderbolt-resume.rules
+```
+
+```
+ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x8086", ATTR{device}=="0x15d4", ATTR{power/control}="on"
+```
+
+```bash
+sudo udevadm control --reload-rules
+sudo udevadm trigger
+```
+
+Wake time dropped from ~65 seconds to ~1 second.
