@@ -211,6 +211,12 @@ menuentry 'CachyOS ECO (Intel only)' --class cachyos --class gnu-linux --class g
 - `dgpu-off.service` — powers off dGPU via vgaswitcheroo after boot
 - `power-profiles-daemon` — CPU power profile management (widget in taskbar)
 
+## Bluetooth
+To auto-disable bluetooth on boot:
+```bash
+sudo systemctl enable rfkill-block@bluetooth.service
+```
+
 ## Boot Entries
 - **CachyOS (default)** — normal boot, both GPUs available, LACT works
 - **CachyOS ECO** — iGPU only, dGPU powered off, ~11W idle
