@@ -87,20 +87,20 @@ sudo mkinitcpio -P
 ```
 Then reboot.
 
-<<<<<<< HEAD
-# MacBook Pro Touchbar Fix After Sleep (Linux)
+# Sleep / Suspend
 
-## Problem
+The fix here should be done so the laptop wakes at all: https://github.com/Dunedan/mbp-2016-linux#suspend--hibernation
+
+Optionally for faster wake up (but more battery consumption) set up S2IDLE instead of DEEP sleep. Add this to your /etc/default/grub GRUB_CMDLINE_LINUX_DEFAULT
+```
+mem_sleep_default=s2idle
+```
+
+## Touchbar Fix After Sleep
 
 On Linux with the `applespi` drivers, the touchbar goes blank after waking from s2idle suspend and doesn't come back until a full reboot.
 
-## Root Cause
-
 The touchbar is a USB HID device (`05ac:8600`, Apple iBridge) connected internally via USB. After s2idle suspend, the USB device doesn't reinitialize properly on wake. Simply reloading the kernel modules (`apple_ib_tb`, `apple_ibridge`) is not enough — the USB device itself needs to be reset.
-
-## Fix
-
-Create a systemd sleep hook that resets the USB device on resume.
 
 ### 1. Find the USB device path
 
@@ -155,7 +155,7 @@ sudo systemctl suspend
 
 On wake the touchbar should restore automatically.
 
-## Bonus: Fix slow wake (65 second delay)
+## Fix slow wake (65 second delay)
 
 The Thunderbolt 3 USB controllers (`JHL6540`) were timing out on resume causing ~65 second wake times. Fix with a udev rule:
 
@@ -173,13 +173,54 @@ sudo udevadm trigger
 ```
 
 Wake time dropped from ~65 seconds to ~1 second.
-=======
-# Sleep / Suspend
 
-The fix here should be done so the laptop wakes at all: https://github.com/Dunedan/mbp-2016-linux#suspend--hibernation
+# Power Optimization
 
-Optionally for faster wake up (but more battery consumption) set up S2IDLE instead of DEEP sleep. Add this to your /etc/default/grub GRUB_CMDLINE_LINUX_DEFAULT
+## Tools Installed
+- `gpu-switch` (AUR) — iGPU/dGPU switcher for Apple hardware
+- `battop` (AUR) — battery monitoring TUI
+- `powerstat` — power consumption statistics
+
+## GPU Setup
+- `sudo gpu-switch -i` — switched display output to Intel iGPU (persists across reboots)
+- `dgpu-off.service` — powers off AMD dGPU via vgaswitcheroo at boot before apps start
+
+## Kernel Parameters (ECO boot entry only)
+Added to `/etc/grub.d/40_custom` as a separate GRUB entry:
+- `amdgpu.runpm=1` — enable AMD runtime power management
+- `amdgpu.modeset=0` — disable AMD modesetting (iGPU handles display)
+
+## Config Files
+- `/etc/modprobe.d/amdgpu.conf` — amdgpu runtime PM + modeset options
+- `/etc/modprobe.d/i915.conf` — Intel iGPU PSR/FBC/DC power saving
+- `/etc/udev/rules.d/30-amdgpu-pm.rules` — amdgpu runtime PM + low performance level on add
+- `~/.config/wireplumber/wireplumber.conf.d/50-disable-dgpu-hdmi.conf` — disable AMD HDMI audio in WirePlumber (prevents dGPU D3 cold block)
+- `/etc/sysctl.d/powersave.conf` — `vm.dirty_writeback_centisecs = 1500`
+- `/etc/NetworkManager/conf.d/wifi-powersave-off.conf` — WiFi power saving disabled (BCM43602 stability)
+
+## Services
+- `powertop.service` — runs `powertop --auto-tune` at every boot
+- `dgpu-off.service` — powers off dGPU via vgaswitcheroo after boot
+- `power-profiles-daemon` — CPU power profile management (widget in taskbar)
+
+## Bluetooth
+```bash
+sudo rfkill block bluetooth
 ```
-mem_sleep_default=s2idle
-```
->>>>>>> 451fc1f1330b86b6a158fd84ed41eb8a2fb99014
+
+## Boot Entries
+- **CachyOS (default)** — normal boot, both GPUs available, LACT works
+- **CachyOS ECO** — iGPU only, dGPU powered off, ~11W idle
+
+## Results
+| Mode | Idle Power | Est. Battery Life |
+|------|-----------|-------------------|
+| Before tuning | ~23W | ~2.5h |
+| After tuning (ECO) | ~11-12W | ~4-5h |
+
+# LINKS
+
+Various links with helpful info / tutorials
+
+- [Various tweaks](https://dev.to/x1unix/archlinux-setup-guide-for-intel-macbook-pro-58b8#gpu-power-management)
+  - Especially nice is the Power Management guide, I ended up setting up a GRUB boot option, ECO mode, that only uses the Intel iGPU and turns off the dGPU completely, managing around 10-12W consumption with peaks in the 20-25W. (Firefox with various tabs, Zed Editor session, few Terminals)
